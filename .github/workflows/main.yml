@@ -34,12 +34,28 @@ jobs:
         working-directory: ./aluno_code
         run: |
           dart pub get
-          dart test --machine > machine_results.json || true
+          # Usando -r json para Dart puro
+          dart test -r json > machine_results.json || true
 
       - name: Show Summary
         working-directory: ./aluno_code
         run: |
-          # ... (aquela mesma lógica do grep que fizemos antes)
-          PASSED=$(grep -c '"result":"success"' machine_results.json || echo "0")
-          FAILED=$(grep -c '"result":"failure"' machine_results.json || echo "0")
-          echo "Relatório: $PASSED aprovados / $FAILED reprovados."
+          # No Dart puro, buscamos o tipo de evento 'testDone' e o resultado
+          PASSED=$(grep -c '"type":"testDone","result":"success"' machine_results.json || echo "0")
+          FAILED=$(grep -c '"type":"testDone","result":"failure"' machine_results.json || echo "0")
+          ERROR=$(grep -c '"type":"testDone","result":"error"' machine_results.json || echo "0")
+          
+          REPROVADOS=$((FAILED + ERROR))
+          TOTAL=$((PASSED + REPROVADOS))
+
+          echo "------------------------------------------"
+          echo "RESULTADOS FINAIS"
+          echo "------------------------------------------"
+          echo "Total: $TOTAL"
+          echo "Passou: $PASSED"
+          echo "Falhou: $REPROVADOS"
+          echo "------------------------------------------"
+          
+          if [ $REPROVADOS -ne 0 ]; then
+            exit 1
+          fi
